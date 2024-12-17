@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Evolotion Example</title>
+<script src="matter.js"></script>
+</head>
+<body>
+<div id="c"></div>
+<script>
+// module aliases
+var Engine = Matter.Engine,
+    Render = Matter.Render,
+    Runner = Matter.Runner,
+    Bodies = Matter.Bodies,
+    Composite = Matter.Composite;
+
+var canvas_width = 1200;
+var canvas_height = 600;
+
+// create an engine
+var engine = Engine.create();
+
+// create a renderer
+let render = Render.create({
+    element: document.getElementById('c'),
+    engine: engine,
+    options: {
+        width: canvas_width,
+        height: canvas_height,
+        wireframes: false
+    }
+});
+
+// create two boxes and a ground
+var individual1 = Bodies.circle(100, 0, 50);
+individual1.restitution = 0.9;
+var individual2 = Bodies.rectangle(100, 50, 80, 80);
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomFloat(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function generateRandomRocks(count) {
+    const rocks = [];
+    for (let i = 0; i < count; i++) {
+        const x = getRandomFloat(canvas_width/count*i, canvas_width/count*(i + 1));
+        const y = getRandomFloat(canvas_height/count*i, canvas_height/count*(i + 1));
+        const radius = getRandomFloat(30, 100); // 随机半径或边长
+        const sides = getRandomInt(3, 10); // 随机边数
+
+        const rock = Bodies.polygon(x, y, sides, radius, { isStatic: true });
+        rocks.push(rock);
+    }
+    return rocks;
+}
+
+// 生成19个随机岩石
+const mountain = generateRandomRocks(19);
+/*
+var rock1 = Bodies.circle(0, 100, 50, {isStatic: true});
+var rock2 = Bodies.circle(60, 140, 60, {isStatic: true});
+var rock3 = Bodies.polygon(140, 200, 8, 45, {isStatic: true});
+var rock4 = Bodies.polygon(180, 200, 7, 45, {isStatic: true});
+var rock5 = Bodies.polygon(200, 220, 6, 20, {isStatic: true});
+var rock6 = Bodies.polygon(210, 250, 10, 60, {isStatic: true});
+var rock7 = Bodies.polygon(230, 290, 3, 30, {isStatic: true});
+var rock8 = Bodies.polygon(300, 230, 5, 80, {isStatic: true});
+var rock9 = Bodies.polygon(360, 250, 8, 25, {isStatic: true});
+var rock10 = Bodies.polygon(390, 260, 4, 30, {isStatic: true});
+var rock11 = Bodies.polygon(440, 270, 9, 30, {isStatic: true});
+var rock12 = Bodies.polygon(480, 330, 9, 30, {isStatic: true});
+var rock13 = Bodies.polygon(510, 340, 4, 30, {isStatic: true});
+var rock14 = Bodies.rectangle(640, 380, 400, 80, {isStatic: true});
+var rock15 = Bodies.polygon(880, 420, 7, 50, {isStatic: true});
+var rock16 = Bodies.polygon(920, 430, 7, 60, {isStatic: true});
+var rock17 = Bodies.polygon(1000, 510, 5, 80, {isStatic: true});
+var rock18 = Bodies.polygon(1100, 520, 9, 100, {isStatic: true});
+var rock19 = Bodies.polygon(1130, 560, 5, 40, {isStatic: true});
+var mountain = [].concat(rock1, rock2, rock3, rock4,
+                            rock5, rock6, rock7, rock8, rock9, rock10,
+                            rock11, rock12, rock13, rock14, rock15, rock16,
+                            rock17, rock18, rock19);
+*/
+
+mountain.forEach(function(rock) {
+    rock.restitution = 0.9;
+});
+// add all of the bodies to the world
+Composite.add(engine.world, [individual1].concat(mountain));
+
+// run the renderer
+Render.run(render);
+
+// create runner
+var runner = Runner.create();
+
+// run the engine
+Runner.run(runner, engine);
+</script>
+</body>
+</html>
