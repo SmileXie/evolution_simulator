@@ -4,9 +4,15 @@
 <meta charset="UTF-8">
 <title>Evolotion Simulater</title>
 <script src="matter.js"></script>
+<style>
+    #label {
+        font-size: 24px;
+    }
+</style>
 </head>
 <body>
-<div id="c"></div>
+<div id="label"></div> 
+<div id="canvas"></div>
 <script>
 // module aliases
 var Engine = Matter.Engine,
@@ -22,8 +28,8 @@ var canvas_width = 1200;
 var canvas_height = 600;
 
 var engine = Engine.create();
-let render = Render.create({
-    element: document.getElementById('c'),
+var render = Render.create({
+    element: document.getElementById('canvas'),
     engine: engine,
     options: {
         width: canvas_width,
@@ -33,6 +39,9 @@ let render = Render.create({
         background: '#0D7D98'
     }
 });
+
+var generation = 1;
+var individualNumber = 1;
 
 function sfc32(a, b, c, d) {
     return function() {
@@ -48,12 +57,10 @@ function sfc32(a, b, c, d) {
     }
 }
 
-var individual_seed = 1088
+var individual_seed = 1999;
 var environment_seed = 2020;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
-//var seed = 1010 ^ 0xDEADBEEF;
-//var rand = sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, seed);
 // Pad seed with Phi, Pi and E.
 // https://en.wikipedia.org/wiki/Nothing-up-my-sleeve_number
 
@@ -84,11 +91,11 @@ function generateRamdonIndividual() {
                                             strokeStyle: '#000000',
                                             lineWidth: 1 
                                         }});
-    individual.restitution = 0.9;
+    individual.restitution = getRandomFloat(0, 1.0, individualRand);;
     return individual;
 }
 
-var individual1 = generateRamdonIndividual();
+var individual = generateRamdonIndividual();
 
 function generateRandomRocks(count) {
     const rocks = [];
@@ -112,41 +119,66 @@ function generateRandomRocks(count) {
     return rocks;
 }
 
-// 生成40个随机岩石
-const mountain = generateRandomRocks(40);
+const mountain = generateRandomRocks(400);
 mountain.forEach(function(rock) {
     rock.restitution = 0.9;
 });
 
 mountain_com = Composite.create({bodies: mountain});
 // add all of the bodies to the world
-Composite.add(engine.world, individual1);
+Composite.add(engine.world, individual);
 Composite.add(engine.world, mountain_com);
 
-// run the renderer
 Render.run(render);
 
-// create runner
 var runner = Runner.create();
-
-// run the engine
 Runner.run(runner, engine);
 
+var lastIndividualPosition = {x:0, y:0};
+var individualStaticTime = 0;
 Events.on(render, 'beforeRender', function() {
     
-    if (individual1.position.x > canvas_width/2 && individual1.position.y <= canvas_height/2) {
-        Bounds.shift(render.bounds, {x: individual1.position.x - canvas_width/2, y:0});
+    // move the camera to follow the individual
+    if (individual.position.x > canvas_width/2 && individual.position.y <= canvas_height/2) {
+        Bounds.shift(render.bounds, {x: individual.position.x - canvas_width/2, y:0});
     }
 
-    if (individual1.position.y > canvas_height/2 && individual1.position.x <= canvas_width/2) {
-        Bounds.shift(render.bounds, {x: 0, y:individual1.position.y > canvas_height/2});
+    if (individual.position.y > canvas_height/2 && individual.position.x <= canvas_width/2) {
+        Bounds.shift(render.bounds, {x: 0, y:individual.position.y > canvas_height/2});
     }
 
-    if (individual1.position.x > canvas_width/2 && individual1.position.y > canvas_height/2) {
+    if (individual.position.x > canvas_width/2 && individual.position.y > canvas_height/2) {
         Bounds.shift(render.bounds, 
-                        {x: individual1.position.x - canvas_width/2, y:individual1.position.y - canvas_height/2});
+                        {x: individual.position.x - canvas_width/2, y:individual.position.y - canvas_height/2});
     }
+
+    if (Math.abs(lastIndividualPosition.x - individual.position.x) < 1.0
+            && Math.abs(lastIndividualPosition.y - individual.position.y) < 1.0) {
+        individualStaticTime += 1;
+    } else {
+        individualStaticTime = 0;
+    }
+
+    // if the individual is static or it drops out of the rocks, generate a new individual
+    if (individualStaticTime > 300 || individual.position.y > canvas_height * 10) {
+        individualNumber += 1;
+        // reset the view and generate a new individual
+        Composite.remove(engine.world, individual);
+        individual = generateRamdonIndividual();
+        Composite.add(engine.world, individual);
+
+        Bounds.shift(render.bounds, {x:0, y:0});
+        individualStaticTime = 0;
+        console.log(`Individual No. ${individualNumber} generated`);
+        document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
+    }
+
+    lastIndividualPosition = {x: individual.position.x, y: individual.position.y};
 });
+
+// update the label
+document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
+
 
 
 </script>
