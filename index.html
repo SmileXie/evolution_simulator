@@ -58,7 +58,7 @@ function sfc32(a, b, c, d) {
 }
 
 var individual_seed = 1999;
-var environment_seed = 2020;
+var environment_seed = 3000;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // Pad seed with Phi, Pi and E.
@@ -76,7 +76,7 @@ function getRandomFloat(min, max, rand) {
 }
 
 function generateRamdonIndividual() {
-    const vertices_num = getRandomInt(3, 10, individualRand);
+    const vertices_num = getRandomInt(3, 50, individualRand);
     const vertices = [];
 
     for (let i = 0; i < vertices_num; i++) {
@@ -91,7 +91,8 @@ function generateRamdonIndividual() {
                                             strokeStyle: '#000000',
                                             lineWidth: 1 
                                         }});
-    individual.restitution = getRandomFloat(0, 1.0, individualRand);;
+    individual.restitution = getRandomFloat(0, 1.0, individualRand);
+    individual.friction = getRandomFloat(0, 1.0, individualRand);
     return individual;
 }
 
@@ -99,8 +100,8 @@ var individual = generateRamdonIndividual();
 
 function generateRandomRocks(count) {
     const rocks = [];
-    const rocks_x_gap = canvas_width/20;
-    const rocks_y_gap = canvas_height/20;
+    const rocks_x_gap = canvas_width / 20;
+    const rocks_y_gap = canvas_height / 20;
     for (let i = 0; i < count; i++) {
         const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
         const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
@@ -121,7 +122,8 @@ function generateRandomRocks(count) {
 
 const mountain = generateRandomRocks(400);
 mountain.forEach(function(rock) {
-    rock.restitution = 0.9;
+    rock.restitution = 0.1;
+    rock.friction = 1;
 });
 
 const mountainCom = Composite.create({bodies: mountain});
@@ -173,7 +175,7 @@ Events.on(render, 'beforeRender', function() {
     if (individualStaticTime > 300 || individual.position.y > canvas_height * 10) {
         
         resetIndividual();
-        
+
         individualNumber += 1;
         individualStaticTime = 0;
         console.log(`Individual No. ${individualNumber} generated`);
