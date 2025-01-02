@@ -21,10 +21,7 @@ var Engine = Matter.Engine,
 var canvas_width = 1200;
 var canvas_height = 600;
 
-// create an engine
 var engine = Engine.create();
-
-// create a renderer
 let render = Render.create({
     element: document.getElementById('c'),
     engine: engine,
@@ -51,29 +48,33 @@ function sfc32(a, b, c, d) {
     }
 }
 
-var individual_seed = 1234
-var environment_seed = 2345;
+var individual_seed = 1088
+var environment_seed = 2020;
+
+// seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
+//var seed = 1010 ^ 0xDEADBEEF;
+//var rand = sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, seed);
 // Pad seed with Phi, Pi and E.
 // https://en.wikipedia.org/wiki/Nothing-up-my-sleeve_number
-// seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
-var seed = 1010 ^ 0xDEADBEEF;
-var rand = sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, seed);
 
-function getRandomInt(min, max) {
+var individualRand = sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, individual_seed ^ 0xDEADBEEF);
+var environmentRand = sfc32(0x9E3779B9, 0x243F6A88, 0xB7E15162, environment_seed ^ 0xDEADBEEF);
+
+function getRandomInt(min, max, rand) {
     return Math.floor(rand() * (max - min + 1)) + min;
 }
 
-function getRandomFloat(min, max) {
+function getRandomFloat(min, max, rand) {
     return rand() * (max - min) + min;
 }
 
 function generateRamdonIndividual() {
-    const vertices_num = getRandomInt(3, 10);
+    const vertices_num = getRandomInt(3, 10, individualRand);
     const vertices = [];
 
     for (let i = 0; i < vertices_num; i++) {
-        const x = getRandomFloat(-50, 50, individual_seed);
-        const y = getRandomFloat(-50, 50, individual_seed);
+        const x = getRandomFloat(-50, 50, individualRand);
+        const y = getRandomFloat(-50, 50, individualRand);
         vertices.push({x:x, y:y });
     }
 
@@ -94,10 +95,10 @@ function generateRandomRocks(count) {
     const rocks_x_gap = canvas_width/20;
     const rocks_y_gap = canvas_height/20;
     for (let i = 0; i < count; i++) {
-        const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1));
-        const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1));
-        const radius = getRandomFloat(30, 100);
-        const sides = getRandomInt(3, 10);
+        const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
+        const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
+        const radius = getRandomFloat(30, 100, environmentRand);
+        const sides = getRandomInt(3, 10, environmentRand);
 
         const rock = Bodies.polygon(x, y, sides, radius, 
                                     { isStatic: true, 
