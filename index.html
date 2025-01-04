@@ -19,6 +19,7 @@ var Engine = Matter.Engine,
     Render = Matter.Render,
     Runner = Matter.Runner,
     Bodies = Matter.Bodies,
+    Body = Matter.Body,
     Composite = Matter.Composite;
     Common = Matter.Common;
     Events = Matter.Events;
@@ -93,6 +94,8 @@ function generateRamdonIndividual() {
                                         }});
     individual.restitution = getRandomFloat(0, 1.0, individualRand);
     individual.friction = getRandomFloat(0, 1.0, individualRand);
+//    individual.restitution = 0.9
+//    individual.friction = 0.0;
     return individual;
 }
 
@@ -117,10 +120,21 @@ function generateRandomRocks(count) {
                                         }});
         rocks.push(rock);
     }
+
+    bottom_rock = Bodies.rectangle(rocks_x_gap * count + 1000, rocks_y_gap * count + 150, 2000, 30, 
+                                    { isStatic: true, 
+                                        render: { 
+                                            fillStyle: '#F5AF05', 
+                                            strokeStyle: '#000000',
+                                            lineWidth: 2
+                                        }});
+
+    rocks.push(bottom_rock);
+
     return rocks;
 }
 
-const mountain = generateRandomRocks(400);
+const mountain = generateRandomRocks(40);
 mountain.forEach(function(rock) {
     rock.restitution = 0.1;
     rock.friction = 1;
@@ -136,7 +150,6 @@ Render.run(render);
 var runner = Runner.create();
 Runner.run(runner, engine);
 
-var lastIndividualPosition = {x:0, y:0};
 var individualStaticTime = 0;
 
 function resetIndividual() {
@@ -164,8 +177,7 @@ Events.on(render, 'beforeRender', function() {
                         {x: individual.position.x - canvas_width/2, y:individual.position.y - canvas_height/2});
     }
 
-    if (Math.abs(lastIndividualPosition.x - individual.position.x) < 1.0
-            && Math.abs(lastIndividualPosition.y - individual.position.y) < 1.0) {
+    if (Body.getSpeed(individual) < 0.5 && Body.getAngularSpeed(individual) < 0.01) {
         individualStaticTime += 1;
     } else {
         individualStaticTime = 0;
@@ -181,8 +193,6 @@ Events.on(render, 'beforeRender', function() {
         console.log(`Individual No. ${individualNumber} generated`);
         document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
     }
-
-    lastIndividualPosition = {x: individual.position.x, y: individual.position.y};
 });
 
 // update the label
