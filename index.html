@@ -145,6 +145,8 @@ const mountainCom = Composite.create({bodies: mountain});
 Composite.add(engine.world, individual);
 Composite.add(engine.world, mountainCom);
 
+//engine.timing.timeScale = 5;
+
 Render.run(render);
 
 var runner = Runner.create();
@@ -194,6 +196,12 @@ Events.on(render, 'beforeRender', function() {
         document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
     }
 });
+
+/*
+Events.on(engine, 'afterUpdate', function(event) {
+
+});
+*/
 
 // update the label
 document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
