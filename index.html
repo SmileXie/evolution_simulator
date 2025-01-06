@@ -58,8 +58,8 @@ function sfc32(a, b, c, d) {
     }
 }
 
-var individual_seed = 1999;
-var environment_seed = 3000;
+var individual_seed = 1077;
+var environment_seed = 2025;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // Pad seed with Phi, Pi and E.
@@ -76,7 +76,11 @@ function getRandomFloat(min, max, rand) {
     return rand() * (max - min) + min;
 }
 
-function generateRamdonIndividual() {
+
+var rockCategory = 1 << 0;
+var individualNumOfBatch = 25; // number of individuals in one batch
+
+function generateRamdonIndividual(num_in_generation) {
     const vertices_num = getRandomInt(3, 50, individualRand);
     const vertices = [];
 
@@ -86,12 +90,17 @@ function generateRamdonIndividual() {
         vertices.push({x:x, y:y });
     }
 
-    individual = Bodies.fromVertices(100, -200, vertices, 
-                                        {render: { 
-                                            fillStyle: '#9F1705', 
-                                            strokeStyle: '#000000',
-                                            lineWidth: 1 
-                                        }});
+    individual = Bodies.fromVertices(100, -200, vertices, {
+        collisionFilter: {
+            mask: rockCategory, 
+            category: 1 << num_in_generation
+        },
+        render: { 
+            fillStyle: 'rgba(159, 23, 5, 0.7)',
+            strokeStyle: '#000000',
+            lineWidth: 1 
+        }
+    });
     individual.restitution = getRandomFloat(0, 1.0, individualRand);
     individual.friction = getRandomFloat(0, 1.0, individualRand);
 //    individual.restitution = 0.9
@@ -99,35 +108,59 @@ function generateRamdonIndividual() {
     return individual;
 }
 
-var individual = generateRamdonIndividual();
+function generateGeneration() {
+    let individuals = [];
+    for (let i = 0; i < individualNumOfBatch; i++) {
+        individuals.push(generateRamdonIndividual(i + 1));
+    }
+    return individuals;
+}
+
+var individuals = generateGeneration();
 
 function generateRandomRocks(count) {
     const rocks = [];
     const rocks_x_gap = canvas_width / 20;
     const rocks_y_gap = canvas_height / 20;
+    const allOnes32 = 0xffffffff;
     for (let i = 0; i < count; i++) {
         const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
         const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
         const radius = getRandomFloat(30, 100, environmentRand);
         const sides = getRandomInt(3, 10, environmentRand);
 
-        const rock = Bodies.polygon(x, y, sides, radius, 
-                                    { isStatic: true, 
-                                        render: { 
-                                            fillStyle: '#F5AF05', 
-                                            strokeStyle: '#000000',
-                                            lineWidth: 2
-                                        }});
+        let rock = Bodies.polygon(x, y, sides, radius, { 
+            isStatic: true, 
+            collisionFilter: {
+                category: rockCategory,
+                mask: allOnes32
+            },
+            render: { 
+                fillStyle: '#F5AF05', 
+                strokeStyle: '#000000',
+                lineWidth: 2
+            }
+        });
+        rock.restitution = 0.1;
+        rock.friction = 1;
+
         rocks.push(rock);
     }
 
-    bottom_rock = Bodies.rectangle(rocks_x_gap * count + 1000, rocks_y_gap * count + 150, 2000, 30, 
-                                    { isStatic: true, 
-                                        render: { 
-                                            fillStyle: '#F5AF05', 
-                                            strokeStyle: '#000000',
-                                            lineWidth: 2
-                                        }});
+    let bottom_rock = Bodies.rectangle(rocks_x_gap * count + 1000, rocks_y_gap * count + 150, 2000, 30, { 
+        isStatic: true, 
+        collisionFilter: {
+            category: rockCategory,
+            mask: allOnes32
+        },
+        render: { 
+            fillStyle: '#F5AF05', 
+            strokeStyle: '#000000',
+            lineWidth: 2
+        }
+    });
+    bottom_rock.restitution = 0.1;
+    bottom_rock.friction = 1;
 
     rocks.push(bottom_rock);
 
@@ -135,14 +168,10 @@ function generateRandomRocks(count) {
 }
 
 const mountain = generateRandomRocks(40);
-mountain.forEach(function(rock) {
-    rock.restitution = 0.1;
-    rock.friction = 1;
-});
-
 const mountainCom = Composite.create({bodies: mountain});
+var individualCom = Composite.create({bodies: individuals});
 // add all of the bodies to the world
-Composite.add(engine.world, individual);
+Composite.add(engine.world, individualCom);
 Composite.add(engine.world, mountainCom);
 
 //engine.timing.timeScale = 5;
@@ -154,57 +183,113 @@ Runner.run(runner, engine);
 
 var individualStaticTime = 0;
 
-function resetIndividual() {
+
+function resetIndividuals() {
     // reset the view and generate a new individual
-    Composite.remove(engine.world, individual);
-    individual = generateRamdonIndividual();
-    Composite.add(engine.world, individual);
+    Composite.clear(individualCom);
+    individuals = generateGeneration();
+    Composite.add(individualCom, individuals);
 
     Bounds.shift(render.bounds, {x:0, y:0});
 }
 
+
+function removeDeadIndividuals() {
+    // remove individual that drops out of the rocks, 
+    for (let i = 0; i < individuals.length; i++) {
+        if (individuals[i].position.y > canvas_height * 10) {
+            Composite.remove(mountainCom, individuals[i]);
+            individuals.splice(i, 1);
+            i--;
+        }
+    }
+}
+
+function findMaxXIndividual(individuals) {
+    if (individuals.length === 0) {
+        return null;
+    }
+
+    let maxIndividual = individuals[0];
+    for (let i = 1; i < individuals.length; i++) {
+        if (individuals[i].position.x > maxIndividual.position.x) {
+            maxIndividual = individuals[i]; 
+        }
+    }
+    return maxIndividual;
+}
+
+function findFastIndividual(individuals) {
+    if (individuals.length === 0) {
+        return null;
+    }
+
+    let fastIndividual = individuals[0];
+    for (let i = 1; i < individuals.length; i++) {
+        if (Body.getSpeed(individuals[i]) > Body.getSpeed(fastIndividual)) {
+            fastIndividual = individuals[i]; 
+        }
+    }
+
+    if (Body.getSpeed(fastIndividual) >= 0.5) {
+        return fastIndividual;
+    }
+    
+    fastIndividual = individuals[0];
+    for (let i = 1; i < individuals.length; i++) {
+        if (Body.getAngularSpeed(individuals[i]) > Body.getAngularSpeed(fastIndividual)) {
+            fastIndividual = individuals[i]; 
+        }
+    }
+
+    return fastIndividual;
+}
+
 Events.on(render, 'beforeRender', function() {
     
+    removeDeadIndividuals();
+
+    const headmost = findMaxXIndividual(individuals);
+
     // move the camera to follow the individual
-    if (individual.position.x > canvas_width/2 && individual.position.y <= canvas_height/2) {
-        Bounds.shift(render.bounds, {x: individual.position.x - canvas_width/2, y:0});
+    if (headmost.position.x > canvas_width/2 && headmost.position.y <= canvas_height/2) {
+        Bounds.shift(render.bounds, {x: headmost.position.x - canvas_width/2, y:0});
     }
 
-    if (individual.position.y > canvas_height/2 && individual.position.x <= canvas_width/2) {
-        Bounds.shift(render.bounds, {x: 0, y:individual.position.y > canvas_height/2});
+    if (headmost.position.y > canvas_height/2 && headmost.position.x <= canvas_width/2) {
+        Bounds.shift(render.bounds, {x: 0, y:headmost.position.y > canvas_height/2});
     }
 
-    if (individual.position.x > canvas_width/2 && individual.position.y > canvas_height/2) {
+    if (headmost.position.x > canvas_width/2 && headmost.position.y > canvas_height/2) {
         Bounds.shift(render.bounds, 
-                        {x: individual.position.x - canvas_width/2, y:individual.position.y - canvas_height/2});
+                        {x: headmost.position.x - canvas_width/2, y:headmost.position.y - canvas_height/2});
     }
 
-    if (Body.getSpeed(individual) < 0.5 && Body.getAngularSpeed(individual) < 0.01) {
+    const fastIndividual = findFastIndividual(individuals);
+
+    if (Body.getSpeed(fastIndividual) < 0.5 && Body.getAngularSpeed(fastIndividual) < 0.01) {
         individualStaticTime += 1;
     } else {
         individualStaticTime = 0;
     }
 
-    // if the individual is static or it drops out of the rocks, generate a new individual
-    if (individualStaticTime > 300 || individual.position.y > canvas_height * 10) {
+    // if all the individuals are static
+    
+    if (individualStaticTime > 300) {
         
-        resetIndividual();
+        resetIndividuals();
 
-        individualNumber += 1;
+        individualNumber += individualNumOfBatch;
         individualStaticTime = 0;
-        console.log(`Individual No. ${individualNumber} generated`);
-        document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
+        console.log(`Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1} generated`);
+        document.getElementById(
+            "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
     }
-});
-
-/*
-Events.on(engine, 'afterUpdate', function(event) {
 
 });
-*/
 
-// update the label
-document.getElementById("label").innerText = `Generation ${generation}, Individual No. ${individualNumber}`;
+document.getElementById(
+            "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
 
 
 
