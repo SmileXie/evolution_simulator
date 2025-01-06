@@ -59,7 +59,7 @@ function sfc32(a, b, c, d) {
 }
 
 var individual_seed = 1077;
-var environment_seed = 2025;
+var environment_seed = 1099;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // Pad seed with Phi, Pi and E.
@@ -89,12 +89,13 @@ function generateRamdonIndividual(num_in_generation) {
         const y = getRandomFloat(-50, 50, individualRand);
         vertices.push({x:x, y:y });
     }
-
+    const chamfer_radius = getRandomFloat(0, 40, environmentRand);
     individual = Bodies.fromVertices(100, -200, vertices, {
         collisionFilter: {
             mask: rockCategory, 
             category: 1 << num_in_generation
         },
+        chamfer: { radius: chamfer_radius },
         render: { 
             fillStyle: 'rgba(159, 23, 5, 0.7)',
             strokeStyle: '#000000',
@@ -128,13 +129,14 @@ function generateRandomRocks(count) {
         const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
         const radius = getRandomFloat(30, 100, environmentRand);
         const sides = getRandomInt(3, 10, environmentRand);
-
+        const chamfer_radius = getRandomFloat(0, 30, environmentRand);
         let rock = Bodies.polygon(x, y, sides, radius, { 
             isStatic: true, 
             collisionFilter: {
                 category: rockCategory,
                 mask: allOnes32
             },
+            chamfer: { radius: chamfer_radius },
             render: { 
                 fillStyle: '#F5AF05', 
                 strokeStyle: '#000000',
