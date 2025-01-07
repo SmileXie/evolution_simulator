@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Evolotion Simulater</title>
+<!--<script src="decomp-0.2.0.js"></script>-->
 <script src="matter.js"></script>
 <style>
     #label {
@@ -24,6 +25,7 @@ var Engine = Matter.Engine,
     Common = Matter.Common;
     Events = Matter.Events;
     Bounds = Matter.Bounds;
+    Vertices = Matter.Vertices;
 
 var canvas_width = 1200;
 var canvas_height = 600;
@@ -42,7 +44,7 @@ var render = Render.create({
 });
 
 var generation = 1;
-var individualNumber = 1;
+var individualNumber = 1; // individual number in one batch
 
 function sfc32(a, b, c, d) {
     return function() {
@@ -96,14 +98,15 @@ function generateRamdonIndividual(num_in_generation) {
             category: 1 << num_in_generation
         },
         chamfer: { radius: chamfer_radius },
+        restitution: getRandomFloat(0, 1.0, individualRand),
+        friction: getRandomFloat(0, 1.0, individualRand),
         render: { 
             fillStyle: 'rgba(159, 23, 5, 0.7)',
             strokeStyle: '#000000',
             lineWidth: 1 
         }
     });
-    individual.restitution = getRandomFloat(0, 1.0, individualRand);
-    individual.friction = getRandomFloat(0, 1.0, individualRand);
+
 //    individual.restitution = 0.9
 //    individual.friction = 0.0;
     return individual;
@@ -124,6 +127,20 @@ function generateRandomRocks(count) {
     const rocks_x_gap = canvas_width / 20;
     const rocks_y_gap = canvas_height / 20;
     const allOnes32 = 0xffffffff;
+
+    let mountain_vt = Vertices.fromPath('0 0 100 100 200 80 300 150 400 200 0 200');
+    mountain_vt = Vertices.chamfer(mountain_vt, 30)
+    let mountain = Bodies.fromVertices(200, 400, mountain_vt, {
+        isStatic: true, 
+        render: { 
+            fillStyle: '#F5AF05', 
+            strokeStyle: '#000000',
+            lineWidth: 2
+        }
+    }, true);
+
+    rocks.push(mountain);
+    
     for (let i = 0; i < count; i++) {
         const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
         const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
@@ -137,14 +154,14 @@ function generateRandomRocks(count) {
                 mask: allOnes32
             },
             chamfer: { radius: chamfer_radius },
+            restitution: 0.1,
+            friction: 1,
             render: { 
                 fillStyle: '#F5AF05', 
                 strokeStyle: '#000000',
                 lineWidth: 2
             }
         });
-        rock.restitution = 0.1;
-        rock.friction = 1;
 
         rocks.push(rock);
     }
@@ -155,14 +172,14 @@ function generateRandomRocks(count) {
             category: rockCategory,
             mask: allOnes32
         },
+        restitution: 0.1,
+        friction: 1,
         render: { 
             fillStyle: '#F5AF05', 
             strokeStyle: '#000000',
             lineWidth: 2
         }
     });
-    bottom_rock.restitution = 0.1;
-    bottom_rock.friction = 1;
 
     rocks.push(bottom_rock);
 
