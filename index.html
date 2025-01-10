@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Evolotion Simulater</title>
-<!--<script src="decomp-0.2.0.js"></script>-->
+<script src="decomp-0.2.0.js"></script>
 <script src="matter.js"></script>
 <style>
     #label {
@@ -84,31 +84,32 @@ var individualNumOfBatch = 25; // number of individuals in one batch
 
 function generateRamdonIndividual(num_in_generation) {
     const vertices_num = getRandomInt(3, 50, individualRand);
-    const vertices = [];
+    let vertices = [];
 
-    for (let i = 0; i < vertices_num; i++) {
-        const x = getRandomFloat(-50, 50, individualRand);
-        const y = getRandomFloat(-50, 50, individualRand);
-        vertices.push({x:x, y:y });
-    }
-    const chamfer_radius = getRandomFloat(0, 40, environmentRand);
-    individual = Bodies.fromVertices(100, -200, vertices, {
-        collisionFilter: {
-            mask: rockCategory, 
-            category: 1 << num_in_generation
-        },
-        chamfer: { radius: chamfer_radius },
-        restitution: getRandomFloat(0, 1.0, individualRand),
-        friction: getRandomFloat(0, 1.0, individualRand),
-        render: { 
-            fillStyle: 'rgba(159, 23, 5, 0.7)',
-            strokeStyle: '#000000',
-            lineWidth: 1 
+    do {
+        vertices = [];
+        for (let i = 0; i < vertices_num; i++) {
+            const x = getRandomFloat(-50, 50, individualRand);
+            const y = getRandomFloat(-50, 50, individualRand);
+            vertices.push({x:x, y:y });
         }
-    });
+        const chamfer_radius = getRandomFloat(0, 40, environmentRand);
+        individual = Bodies.fromVertices(100, -200, vertices, {
+            collisionFilter: {
+                mask: rockCategory, 
+                category: 1 << num_in_generation
+            },
+            chamfer: { radius: chamfer_radius },
+            restitution: getRandomFloat(0, 1.0, individualRand),
+            friction: getRandomFloat(0, 1.0, individualRand),
+            render: { 
+                fillStyle: 'rgba(159, 23, 5, 0.7)',
+                strokeStyle: '#000000',
+                lineWidth: 1 
+            }
+        });
+    } while (individual === undefined) // if the vertices can NOT be converted to a valid polygon, Bodies.fromVertices will return undefined
 
-//    individual.restitution = 0.9
-//    individual.friction = 0.0;
     return individual;
 }
 
