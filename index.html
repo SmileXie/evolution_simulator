@@ -26,6 +26,7 @@ var Engine = Matter.Engine,
     Events = Matter.Events;
     Bounds = Matter.Bounds;
     Vertices = Matter.Vertices;
+    Vector = Matter.Vector;
 
 var canvas_width = 1200;
 var canvas_height = 600;
@@ -61,7 +62,7 @@ function sfc32(a, b, c, d) {
 }
 
 var individual_seed = 1077;
-var environment_seed = 1099;
+var environment_seed = 8080;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // Pad seed with Phi, Pi and E.
@@ -82,26 +83,37 @@ function getRandomFloat(min, max, rand) {
 var rockCategory = 1 << 0;
 var individualNumOfBatch = 25; // number of individuals in one batch
 
+function polarToCartesian(angle, distance) {
+    var radians = angle * Math.PI / 180;
+
+    var x = distance * Math.cos(radians);
+    var y = distance * Math.sin(radians);
+
+    return { x: x, y: y };
+}
+
 function generateRamdonIndividual(num_in_generation) {
-    const vertices_num = getRandomInt(3, 50, individualRand);
-    let vertices = [];
+    const vertices_num = getRandomInt(3, 10, individualRand);
+    let path = "";
 
     do {
-        vertices = [];
+        path = "";
         for (let i = 0; i < vertices_num; i++) {
-            const x = getRandomFloat(-50, 50, individualRand);
-            const y = getRandomFloat(-50, 50, individualRand);
-            vertices.push({x:x, y:y });
+            let angle = 360/vertices_num*i;//getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
+            let distance = 40;//getRandomFloat(10, 50, individualRand);
+            let { x, y } = polarToCartesian(angle, distance);
+            path += ` ${x} ${y} `;
         }
-        const chamfer_radius = getRandomFloat(0, 40, environmentRand);
-        individual = Bodies.fromVertices(100, -200, vertices, {
+        let individual_vt = Vertices.fromPath(path);
+        let chamfer_radius = getRandomFloat(0, 20, environmentRand);
+        individual_vt = Vertices.chamfer(individual_vt, chamfer_radius);
+        individual = Bodies.fromVertices(100, -200, individual_vt, {
             collisionFilter: {
                 mask: rockCategory, 
                 category: 1 << num_in_generation
             },
-            chamfer: { radius: chamfer_radius },
-            restitution: getRandomFloat(0, 1.0, individualRand),
-            friction: getRandomFloat(0, 1.0, individualRand),
+            restitution: getRandomFloat(0, 0.9, individualRand),
+            friction: getRandomFloat(0.1, 9.0, individualRand),
             render: { 
                 fillStyle: 'rgba(159, 23, 5, 0.7)',
                 strokeStyle: '#000000',
@@ -129,19 +141,22 @@ function generateRandomRocks(count) {
     const rocks_y_gap = canvas_height / 20;
     const allOnes32 = 0xffffffff;
 
-    let mountain_vt = Vertices.fromPath('0 0 100 100 200 80 300 150 400 200 0 200');
-    mountain_vt = Vertices.chamfer(mountain_vt, 30)
-    let mountain = Bodies.fromVertices(200, 400, mountain_vt, {
+    //let mountain_vt = Vertices.fromPath('0 0 400 400 600 350 800 550 1000 700 1200 700 0 700');
+    let mountain_vt = Vertices.fromPath('0 0 400 400 600 410 0 410');
+    mountain_vt = Vertices.chamfer(mountain_vt, 10);
+    const centre = Vertices.centre(mountain_vt);
+    let mountain = Bodies.fromVertices(0, 0, mountain_vt, {
         isStatic: true, 
         render: { 
             fillStyle: '#F5AF05', 
-            strokeStyle: '#000000',
-            lineWidth: 2
+            //strokeStyle: '#000000',
+            //lineWidth: 2
         }
-    }, true);
-
+    });
+    offset = Vector.sub(mountain.position, mountain.bounds.min);
+    Body.setPosition(mountain, offset);
     rocks.push(mountain);
-    
+    /*
     for (let i = 0; i < count; i++) {
         const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
         const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
@@ -166,7 +181,7 @@ function generateRandomRocks(count) {
 
         rocks.push(rock);
     }
-
+*/
     let bottom_rock = Bodies.rectangle(rocks_x_gap * count + 1000, rocks_y_gap * count + 150, 2000, 30, { 
         isStatic: true, 
         collisionFilter: {
@@ -277,7 +292,7 @@ Events.on(render, 'beforeRender', function() {
     }
 
     if (headmost.position.y > canvas_height/2 && headmost.position.x <= canvas_width/2) {
-        Bounds.shift(render.bounds, {x: 0, y:headmost.position.y > canvas_height/2});
+        Bounds.shift(render.bounds, {x: 0, y:headmost.position.y - canvas_height/2});
     }
 
     if (headmost.position.x > canvas_width/2 && headmost.position.y > canvas_height/2) {
