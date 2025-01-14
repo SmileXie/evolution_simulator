@@ -93,7 +93,7 @@ function polarToCartesian(angle, distance) {
 }
 
 function generateRamdonIndividual(num_in_generation) {
-    const vertices_num = getRandomInt(4, 12, individualRand);
+    const vertices_num = getRandomInt(4, 20, individualRand);
     let path = "";
 
     do {
@@ -105,8 +105,8 @@ function generateRamdonIndividual(num_in_generation) {
             path += `${x} ${y} `;
         }
         let individual_vt = Vertices.fromPath(path);
-        let chamfer_radius = getRandomFloat(10, 30, environmentRand);
-        individual_vt = Vertices.chamfer(individual_vt, chamfer_radius);
+        //let chamfer_radius = getRandomFloat(5, 20, environmentRand);
+        //individual_vt = Vertices.chamfer(individual_vt, chamfer_radius);
         individual = Bodies.fromVertices(100, 0, individual_vt, {
             collisionFilter: {
                 mask: rockCategory, 
@@ -116,8 +116,8 @@ function generateRamdonIndividual(num_in_generation) {
             friction: getRandomFloat(0.1, 1.0, individualRand),
             render: { 
                 fillStyle: 'rgba(159, 23, 5, 0.7)',
-                strokeStyle: '#000000',
-                lineWidth: 1 
+                //strokeStyle: '#000000',
+                //lineWidth: 1 
             }
         });
     } while (individual === undefined) // if the vertices can NOT be converted to a valid polygon, Bodies.fromVertices will return undefined
