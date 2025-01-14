@@ -61,8 +61,8 @@ function sfc32(a, b, c, d) {
     }
 }
 
-var individual_seed = 1077;
-var environment_seed = 6099;
+var individual_seed = 2456;
+var environment_seed = 1123;
 
 // seedable random number generator: https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // Pad seed with Phi, Pi and E.
@@ -93,27 +93,27 @@ function polarToCartesian(angle, distance) {
 }
 
 function generateRamdonIndividual(num_in_generation) {
-    const vertices_num = getRandomInt(3, 10, individualRand);
+    const vertices_num = getRandomInt(4, 12, individualRand);
     let path = "";
 
     do {
         path = "";
         for (let i = 0; i < vertices_num; i++) {
-            let angle = getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
-            let distance = getRandomFloat(40, 50, individualRand);
+            let angle = 360/vertices_num*i; // getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
+            let distance = getRandomFloat(40, 60, individualRand);
             let { x, y } = polarToCartesian(angle, distance);
             path += `${x} ${y} `;
         }
         let individual_vt = Vertices.fromPath(path);
-        let chamfer_radius = getRandomFloat(0, 20, environmentRand);
+        let chamfer_radius = getRandomFloat(10, 30, environmentRand);
         individual_vt = Vertices.chamfer(individual_vt, chamfer_radius);
-        individual = Bodies.fromVertices(100, -400, individual_vt, {
+        individual = Bodies.fromVertices(100, 0, individual_vt, {
             collisionFilter: {
                 mask: rockCategory, 
                 category: 1 << num_in_generation
             },
             restitution: getRandomFloat(0, 0.9, individualRand),
-            friction: getRandomFloat(0.1, 0.9, individualRand),
+            friction: getRandomFloat(0.1, 1.0, individualRand),
             render: { 
                 fillStyle: 'rgba(159, 23, 5, 0.7)',
                 strokeStyle: '#000000',
@@ -141,19 +141,24 @@ function generateRandomRocks(count) {
     const y_interval = 60;
     const allOnes32 = 0xffffffff;
 
-    //let slope_vt = Vertices.fromPath('0 0 400 400 600 350 800 550 1000 700 1200 700 0 700');
     let slope_path = '0 0 400 400';
+    let last_y = 400;
     for (let i = 0; i < count; i++) {
-        const x = 400 + x_interval * (i + 1);
-        const y = getRandomFloat(
-            400 + y_interval * i - 5, 400 + y_interval * (i + 1), environmentRand);
+        let x = 400 + x_interval * (i + 1);
+        let y;
+        if (i % 10 == 1 || i % 10 == 2) {
+            y = last_y;
+        } else {
+            y = getRandomFloat(
+                400 + y_interval * i, 400 + y_interval * (i + 1), environmentRand);
+        }
         slope_path += ` ${x} ${y}`;
+        last_y = y;
     }
 
     slope_path += ` 0 ${y_interval * count}`;
     let slope_vt = Vertices.fromPath(slope_path);
-    slope_vt = Vertices.chamfer(slope_vt, 60);
-    //const centre = Vertices.centre(slope_vt);
+    //slope_vt = Vertices.chamfer(slope_vt, 30);
     let slope = Bodies.fromVertices(0, 0, slope_vt, {
         isStatic: true, 
         render: { 
@@ -191,7 +196,7 @@ function generateRandomRocks(count) {
         rocks.push(rock);
     }
 */
-    let bottom_rock = Bodies.rectangle(400 + x_interval * (count + 2), y_interval * (count + 2), 2000, 30, { 
+    let bottom_rock = Bodies.rectangle(400 + x_interval * (count + 2), 400 + y_interval * (count + 2), 2000, 30, { 
         isStatic: true, 
         collisionFilter: {
             category: rockCategory,
@@ -211,7 +216,7 @@ function generateRandomRocks(count) {
     return rocks;
 }
 
-const mountain = generateRandomRocks(40);
+const mountain = generateRandomRocks(50);
 const mountainCom = Composite.create({bodies: mountain});
 var individualCom = Composite.create({bodies: individuals});
 // add all of the bodies to the world
