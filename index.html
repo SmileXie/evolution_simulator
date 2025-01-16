@@ -27,6 +27,7 @@ var Engine = Matter.Engine,
     Bounds = Matter.Bounds;
     Vertices = Matter.Vertices;
     Vector = Matter.Vector;
+    Collision = Matter.Collision;
 
 var canvas_width = 1200;
 var canvas_height = 600;
@@ -170,32 +171,7 @@ function generateRandomRocks(count) {
     offset = Vector.sub(slope.position, slope.bounds.min);
     Body.setPosition(slope, offset);
     rocks.push(slope);
-    /*
-    for (let i = 0; i < count; i++) {
-        const x = getRandomFloat(rocks_x_gap*i, rocks_x_gap*(i + 1), environmentRand);
-        const y = getRandomFloat(100 + rocks_y_gap*i, 100 + rocks_y_gap*(i + 1), environmentRand);
-        const radius = getRandomFloat(30, 100, environmentRand);
-        const sides = getRandomInt(3, 10, environmentRand);
-        const chamfer_radius = getRandomFloat(0, 30, environmentRand);
-        let rock = Bodies.polygon(x, y, sides, radius, { 
-            isStatic: true, 
-            collisionFilter: {
-                category: rockCategory,
-                mask: allOnes32
-            },
-            chamfer: { radius: chamfer_radius },
-            restitution: 0.1,
-            friction: 1,
-            render: { 
-                fillStyle: '#F5AF05', 
-                strokeStyle: '#000000',
-                lineWidth: 2
-            }
-        });
 
-        rocks.push(rock);
-    }
-*/
     let bottom_rock = Bodies.rectangle(400 + x_interval * (count + 2), 400 + y_interval * (count + 2), 2000, 30, { 
         isStatic: true, 
         collisionFilter: {
@@ -219,9 +195,14 @@ function generateRandomRocks(count) {
 const mountain = generateRandomRocks(50);
 const mountainCom = Composite.create({bodies: mountain});
 var individualCom = Composite.create({bodies: individuals});
+
+var survivals = [];
+var survivalCom = Composite.create();
+
 // add all of the bodies to the world
 Composite.add(engine.world, individualCom);
 Composite.add(engine.world, mountainCom);
+Composite.add(engine.world, survivalCom);
 
 //engine.timing.timeScale = 5;
 
@@ -254,7 +235,7 @@ function removeDeadIndividuals() {
     }
 }
 
-function findMaxXIndividual(individuals) {
+function findMaxXIndividual(individuals, removeMax = false) {
     if (individuals.length === 0) {
         return null;
     }
@@ -265,8 +246,17 @@ function findMaxXIndividual(individuals) {
             maxIndividual = individuals[i]; 
         }
     }
+
+    if (removeMax) {
+        const index = individuals.indexOf(maxIndividual);
+        if (index > -1) {
+            individuals.splice(index, 1);
+        }
+    }
+
     return maxIndividual;
 }
+
 
 function findFastIndividual(individuals) {
     if (individuals.length === 0) {
@@ -292,6 +282,34 @@ function findFastIndividual(individuals) {
     }
 
     return fastIndividual;
+}
+
+
+
+function getSurvivalIndividuals(individuals) {
+    
+    const bottom_rock = mountain[mountain.length - 1];
+    let survivals = [];
+    let current_survive;
+    do {
+        let headmost = findMaxXIndividual(individuals, true);
+        current_survive = false;
+        if (Collision.collides(headmost, bottom_rock) != null) {
+            Body.setStatic(headmost, true);
+            survivals.push(headmost);
+            current_survive = true;
+        }
+    } while (current_survive);
+    
+    return survivals;
+}
+
+function displaySurvivalIndividuals(survivals) {
+    const y = render.bounds.max.y - 80;
+    for (let i = 0; i < survivals.length; i++) {
+        const x = render.bounds.min.x + 80 + i * 160;
+        Body.setPosition(survivals[i], {x: x, y: y});
+    }
 }
 
 Events.on(render, 'beforeRender', function() {
@@ -325,7 +343,13 @@ Events.on(render, 'beforeRender', function() {
     // if all the individuals are static
     
     if (individualStaticTime > 300) {
-        
+        let batch_survivals = getSurvivalIndividuals(individuals);
+        for (let i = 0; i < batch_survivals.length; i++) {
+            Composite.remove(individualCom, batch_survivals[i]);
+            Composite.add(survivalCom, batch_survivals[i]);
+        }
+        survivals.push(...batch_survivals);
+
         resetIndividuals();
 
         individualNumber += individualNumOfBatch;
@@ -334,6 +358,7 @@ Events.on(render, 'beforeRender', function() {
         document.getElementById(
             "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
     }
+    displaySurvivalIndividuals(survivals);
 
 });
 
