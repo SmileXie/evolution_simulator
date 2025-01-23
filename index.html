@@ -315,6 +315,10 @@ function displaySurvivalIndividuals(survivals) {
     }
 }
 
+function spawnNewGeneration() {
+    
+}
+
 Events.on(render, 'beforeRender', function() {
     
     removeDeadIndividuals();
@@ -350,6 +354,11 @@ Events.on(render, 'beforeRender', function() {
         for (let i = 0; i < batch_survivals.length; i++) {
             Composite.remove(individualCom, batch_survivals[i]);
             Composite.add(survivalCom, batch_survivals[i]);
+        }
+
+        if (survivalCom.bodies.length >= survivalToNextGeneration) {
+            //todo: spawn new generation
+
         }
 
         resetIndividuals();
