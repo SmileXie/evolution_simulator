@@ -83,6 +83,7 @@ function getRandomFloat(min, max, rand) {
 
 var rockCategory = 1 << 0;
 var individualNumOfBatch = 25; // number of individuals in one batch
+var survivalToNextGeneration = 5; // start spawn new generation when this number of individuals survive
 
 function polarToCartesian(angle, distance) {
     var radians = angle * Math.PI / 180;
@@ -196,7 +197,6 @@ const mountain = generateRandomRocks(50);
 const mountainCom = Composite.create({bodies: mountain});
 var individualCom = Composite.create({bodies: individuals});
 
-var survivals = [];
 var survivalCom = Composite.create();
 
 // add all of the bodies to the world
@@ -213,9 +213,11 @@ Runner.run(runner, engine);
 
 var individualStaticTime = 0;
 
+document.getElementById("label").innerText = 
+    `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
 
 function resetIndividuals() {
-    // reset the view and generate a new individual
+    // reset the view and generate a new individual batch
     Composite.clear(individualCom);
     individuals = generateGeneration();
     Composite.add(individualCom, individuals);
@@ -305,6 +307,7 @@ function getSurvivalIndividuals(individuals) {
 }
 
 function displaySurvivalIndividuals(survivals) {
+    // position move along with the rednder.bounds
     const y = render.bounds.max.y - 80;
     for (let i = 0; i < survivals.length; i++) {
         const x = render.bounds.min.x + 80 + i * 160;
@@ -348,7 +351,6 @@ Events.on(render, 'beforeRender', function() {
             Composite.remove(individualCom, batch_survivals[i]);
             Composite.add(survivalCom, batch_survivals[i]);
         }
-        survivals.push(...batch_survivals);
 
         resetIndividuals();
 
@@ -358,13 +360,9 @@ Events.on(render, 'beforeRender', function() {
         document.getElementById(
             "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
     }
-    displaySurvivalIndividuals(survivals);
+    displaySurvivalIndividuals(survivalCom.bodies);
 
 });
-
-document.getElementById(
-            "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
-
 
 
 </script>
