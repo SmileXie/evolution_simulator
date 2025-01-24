@@ -31,6 +31,7 @@ var Engine = Matter.Engine,
 
 var canvas_width = 1200;
 var canvas_height = 600;
+var firstSlopeLen = 1200;
 
 var engine = Engine.create();
 var render = Render.create({
@@ -82,7 +83,7 @@ function getRandomFloat(min, max, rand) {
 
 
 var rockCategory = 1 << 0;
-var individualNumOfBatch = 25; // number of individuals in one batch
+var individualNumOfBatch = 30; // number of individuals in one batch
 var survivalToNextGeneration = 5; // start spawn new generation when this number of individuals survive
 
 function polarToCartesian(angle, distance) {
@@ -94,15 +95,15 @@ function polarToCartesian(angle, distance) {
     return { x: x, y: y };
 }
 
-function generateRamdonIndividual(num_in_generation) {
-    const vertices_num = getRandomInt(4, 20, individualRand);
+function generateRamdonIndividual(num_in_batch) {
+    const vertices_num = getRandomInt(4, 30, individualRand);
     let path = "";
 
     do {
         path = "";
         for (let i = 0; i < vertices_num; i++) {
             let angle = 360/vertices_num*i; // getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
-            let distance = getRandomFloat(40, 60, individualRand);
+            let distance = getRandomFloat(30, 40, individualRand);
             let { x, y } = polarToCartesian(angle, distance);
             path += `${x} ${y} `;
         }
@@ -112,7 +113,7 @@ function generateRamdonIndividual(num_in_generation) {
         individual = Bodies.fromVertices(100, 0, individual_vt, {
             collisionFilter: {
                 mask: rockCategory, 
-                category: 1 << num_in_generation
+                category: 1 << num_in_batch
             },
             restitution: getRandomFloat(0, 0.9, individualRand),
             friction: getRandomFloat(0.1, 1.0, individualRand),
@@ -127,7 +128,7 @@ function generateRamdonIndividual(num_in_generation) {
     return individual;
 }
 
-function generateGeneration() {
+function generateBatch() {
     let individuals = [];
     for (let i = 0; i < individualNumOfBatch; i++) {
         individuals.push(generateRamdonIndividual(i + 1));
@@ -135,7 +136,7 @@ function generateGeneration() {
     return individuals;
 }
 
-var individuals = generateGeneration();
+var individuals = generateBatch();
 
 function generateRandomRocks(count) {
     const rocks = [];
@@ -143,16 +144,16 @@ function generateRandomRocks(count) {
     const y_interval = 60;
     const allOnes32 = 0xffffffff;
 
-    let slope_path = '0 0 400 400';
-    let last_y = 400;
+    let slope_path = `0 0 ${firstSlopeLen} ${firstSlopeLen}`;
+    let last_y = firstSlopeLen;
     for (let i = 0; i < count; i++) {
-        let x = 400 + x_interval * (i + 1);
+        let x = firstSlopeLen + x_interval * (i + 1);
         let y;
         if (i % 10 == 1 || i % 10 == 2) {
             y = last_y;
         } else {
             y = getRandomFloat(
-                400 + y_interval * i, 400 + y_interval * (i + 1), environmentRand);
+                firstSlopeLen + y_interval * i - 20, firstSlopeLen + y_interval * i + 20, environmentRand);
         }
         slope_path += ` ${x} ${y}`;
         last_y = y;
@@ -173,7 +174,7 @@ function generateRandomRocks(count) {
     Body.setPosition(slope, offset);
     rocks.push(slope);
 
-    let bottom_rock = Bodies.rectangle(400 + x_interval * (count + 2), 400 + y_interval * (count + 2), 2000, 30, { 
+    let bottom_rock = Bodies.rectangle(firstSlopeLen + x_interval * (count + 2), firstSlopeLen + y_interval * (count + 2), 2000, 30, { 
         isStatic: true, 
         collisionFilter: {
             category: rockCategory,
@@ -198,6 +199,7 @@ const mountainCom = Composite.create({bodies: mountain});
 var individualCom = Composite.create({bodies: individuals});
 
 var survivalCom = Composite.create();
+var survivalComLast;
 
 // add all of the bodies to the world
 Composite.add(engine.world, individualCom);
@@ -219,7 +221,7 @@ document.getElementById("label").innerText =
 function resetIndividuals() {
     // reset the view and generate a new individual batch
     Composite.clear(individualCom);
-    individuals = generateGeneration();
+    individuals = generateBatch();
     Composite.add(individualCom, individuals);
 
     Bounds.shift(render.bounds, {x:0, y:0});
@@ -310,13 +312,57 @@ function displaySurvivalIndividuals(survivals) {
     // position move along with the rednder.bounds
     const y = render.bounds.max.y - 80;
     for (let i = 0; i < survivals.length; i++) {
-        const x = render.bounds.min.x + 80 + i * 160;
+        const x = render.bounds.min.x + 80 + i * 120;
         Body.setPosition(survivals[i], {x: x, y: y});
     }
 }
 
-function spawnNewGeneration() {
-    
+function spawnNewGenerationBatch(survival_com, start_idx_mother = 0, start_idx_father = 0) {
+    let new_generation = [];
+    let num_in_batch = 0;
+
+    for (let i = start_idx_mother; i < survival_com.bodies.length; i++) {
+        const mother = survival_com.bodies[i];
+
+        for (let j = start_idx_father; j < survival_com.bodies.length; j++) {
+            if (i == j) {
+                continue;
+            }
+            if (num_in_batch >= individualNumOfBatch) {
+                return [new_batch, i, j];
+            }
+
+            const father = survival_com.bodies[j];
+
+            // mother provide the vertices, father provide the restitution and the friction
+            // and spawn a child
+            let vertices = mother.vertices;
+            let restitution = father.restitution;
+            let friction = father.friction;
+
+            const child = Bodies.fromVertices(100, 0, vertices, {
+                collisionFilter: {
+                    mask: rockCategory, 
+                    category: 1 << (num_in_batch + 1)
+                },
+                restitution: restitution,
+                friction: friction,
+                render: { 
+                    fillStyle: 'rgba(159, 23, 5, 0.7)',
+                }
+            });
+            if (child === undefined) {
+                console.log("child is undefined");
+                continue;
+            }
+
+            
+            num_in_batch += 1;
+            new_batch.push(child);
+        }
+    }
+
+    return [new_batch, i, j];
 }
 
 Events.on(render, 'beforeRender', function() {
@@ -357,9 +403,13 @@ Events.on(render, 'beforeRender', function() {
         }
 
         if (survivalCom.bodies.length >= survivalToNextGeneration) {
-            //todo: spawn new generation
+            //survivalComLast = survivalCom;
+            //Composite.clear(survivalCom);
 
         }
+
+        // TODO: spawnNewGenerationBatch中用start_idx来管理太复杂了
+        // 改为每个generation的individual一次性生成，放在临时composite里，需要放到屏幕上跑的时候，再把body移到有显示的composite里。
 
         resetIndividuals();
 
