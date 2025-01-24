@@ -31,7 +31,7 @@ var Engine = Matter.Engine,
 
 var canvas_width = 1200;
 var canvas_height = 600;
-var firstSlopeLen = 1200;
+var firstSlopeLen = 3000;
 
 var engine = Engine.create();
 var render = Render.create({
@@ -96,7 +96,7 @@ function polarToCartesian(angle, distance) {
 }
 
 function generateRamdonIndividual(num_in_batch) {
-    const vertices_num = getRandomInt(4, 30, individualRand);
+    const vertices_num = getRandomInt(4, 20, individualRand);
     let path = "";
 
     do {
@@ -115,7 +115,7 @@ function generateRamdonIndividual(num_in_batch) {
                 mask: rockCategory, 
                 category: 1 << num_in_batch
             },
-            restitution: getRandomFloat(0, 0.9, individualRand),
+            restitution: 0.3, //getRandomFloat(0, 0.9, individualRand),
             friction: getRandomFloat(0.1, 1.0, individualRand),
             render: { 
                 fillStyle: 'rgba(159, 23, 5, 0.7)',
@@ -140,7 +140,7 @@ var individuals = generateBatch();
 
 function generateRandomRocks(count) {
     const rocks = [];
-    const x_interval = 100;
+    const x_interval = 83;
     const y_interval = 60;
     const allOnes32 = 0xffffffff;
 
@@ -153,13 +153,13 @@ function generateRandomRocks(count) {
             y = last_y;
         } else {
             y = getRandomFloat(
-                firstSlopeLen + y_interval * i - 20, firstSlopeLen + y_interval * i + 20, environmentRand);
+                firstSlopeLen + y_interval * i - 40, firstSlopeLen + y_interval * i + 30, environmentRand);
         }
         slope_path += ` ${x} ${y}`;
         last_y = y;
     }
 
-    slope_path += ` 0 ${y_interval * count}`;
+    slope_path += ` 0 ${y_interval * count + firstSlopeLen}`;
     let slope_vt = Vertices.fromPath(slope_path);
     //slope_vt = Vertices.chamfer(slope_vt, 30);
     let slope = Bodies.fromVertices(0, 0, slope_vt, {
@@ -367,7 +367,7 @@ function spawnNewGenerationBatch(survival_com, start_idx_mother = 0, start_idx_f
 
 Events.on(render, 'beforeRender', function() {
     
-    removeDeadIndividuals();
+    //removeDeadIndividuals();
 
     const headmost = findMaxXIndividual(individuals);
 
