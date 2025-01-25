@@ -46,9 +46,6 @@ var render = Render.create({
     }
 });
 
-var generation = 1;
-var individualNumber = 1; // individual number in one batch
-
 function sfc32(a, b, c, d) {
     return function() {
         a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -84,7 +81,10 @@ function getRandomFloat(min, max, rand) {
 
 var rockCategory = 1 << 0;
 var individualNumOfBatch = 30; // number of individuals in one batch
-var survivalToNextGeneration = 5; // start spawn new generation when this number of individuals survive
+var batchNumOfGeneration = 5;
+var individualNumofGeneration = batchNumOfGeneration * individualNumOfBatch;
+var batchInGeneration = 0;
+var generation = 1;
 
 function polarToCartesian(angle, distance) {
     var radians = angle * Math.PI / 180;
@@ -128,15 +128,14 @@ function generateRamdonIndividual(num_in_batch) {
     return individual;
 }
 
-function generateBatch() {
+function generateGeneration() {
     let individuals = [];
-    for (let i = 0; i < individualNumOfBatch; i++) {
+    for (let i = 0; i < individualNumofGeneration; i++) {
         individuals.push(generateRamdonIndividual(i + 1));
     }
     return individuals;
 }
 
-var individuals = generateBatch();
 
 function generateRandomRocks(count) {
     const rocks = [];
@@ -194,9 +193,14 @@ function generateRandomRocks(count) {
     return rocks;
 }
 
+var individualsCurrentGeneration = generateGeneration();
+var individualsInCurrentBatch = individualsCurrentGeneration.slice(
+    batchInGeneration * individualNumOfBatch, (batchInGeneration + 1) * individualNumOfBatch)
+
 const mountain = generateRandomRocks(50);
 const mountainCom = Composite.create({bodies: mountain});
-var individualCom = Composite.create({bodies: individuals});
+var individualCom = Composite.create(
+    {bodies: individualsInCurrentBatch});
 
 var survivalCom = Composite.create();
 var survivalComLast;
@@ -216,18 +220,25 @@ Runner.run(runner, engine);
 var individualStaticTime = 0;
 
 document.getElementById("label").innerText = 
-    `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
+            `Generation ${generation}, Individual No.` +
+            `${batchInGeneration * individualNumOfBatch + 1} - ` +
+            `${(batchInGeneration + 1) * individualNumOfBatch}`
 
 function resetIndividuals() {
     // reset the view and generate a new individual batch
     Composite.clear(individualCom);
-    individuals = generateBatch();
-    Composite.add(individualCom, individuals);
+    for (let i = batchInGeneration * individualNumOfBatch; 
+            i < (batchInGeneration + 1) * individualNumOfBatch; i++) {
+        Composite.add(individualCom, individualsCurrentGeneration[i]);
+    }
+
+    individualsInCurrentBatch = individualsCurrentGeneration.slice(
+                batchInGeneration * individualNumOfBatch, (batchInGeneration + 1) * individualNumOfBatch)
 
     Bounds.shift(render.bounds, {x:0, y:0});
 }
 
-
+/*
 function removeDeadIndividuals() {
     // remove individual that drops out of the rocks, 
     for (let i = 0; i < individuals.length; i++) {
@@ -238,6 +249,7 @@ function removeDeadIndividuals() {
         }
     }
 }
+*/
 
 function findMaxXIndividual(individuals, removeMax = false) {
     if (individuals.length === 0) {
@@ -287,8 +299,6 @@ function findFastIndividual(individuals) {
 
     return fastIndividual;
 }
-
-
 
 function getSurvivalIndividuals(individuals) {
     
@@ -369,7 +379,7 @@ Events.on(render, 'beforeRender', function() {
     
     //removeDeadIndividuals();
 
-    const headmost = findMaxXIndividual(individuals);
+    const headmost = findMaxXIndividual(individualsInCurrentBatch);
 
     // move the camera to follow the individual
     if (headmost.position.x > canvas_width/2 && headmost.position.y <= canvas_height/2) {
@@ -385,7 +395,7 @@ Events.on(render, 'beforeRender', function() {
                         {x: headmost.position.x - canvas_width/2, y:headmost.position.y - canvas_height/2});
     }
 
-    const fastIndividual = findFastIndividual(individuals);
+    const fastIndividual = findFastIndividual(individualsInCurrentBatch);
 
     if (Body.getSpeed(fastIndividual) < 0.5 && Body.getAngularSpeed(fastIndividual) < 0.01) {
         individualStaticTime += 1;
@@ -394,35 +404,38 @@ Events.on(render, 'beforeRender', function() {
     }
 
     // if all the individuals are static
-    
+    // reset the view to play next batch. 
     if (individualStaticTime > 300) {
-        let batch_survivals = getSurvivalIndividuals(individuals);
+        let batch_survivals = getSurvivalIndividuals(individualsInCurrentBatch);
         for (let i = 0; i < batch_survivals.length; i++) {
             Composite.remove(individualCom, batch_survivals[i]);
             Composite.add(survivalCom, batch_survivals[i]);
         }
 
-        if (survivalCom.bodies.length >= survivalToNextGeneration) {
-            //survivalComLast = survivalCom;
-            //Composite.clear(survivalCom);
-
+        if (batchInGeneration >= batchNumOfGeneration - 1) {
+            individualsCurrentGeneration = generateGeneration();
+            Composite.clear(survivalCom);
+            batchInGeneration = 0;
+            generation += 1;
+            
+            
+        } else {
+            batchInGeneration += 1;    
         }
-
-        // TODO: spawnNewGenerationBatch中用start_idx来管理太复杂了
-        // 改为每个generation的individual一次性生成，放在临时composite里，需要放到屏幕上跑的时候，再把body移到有显示的composite里。
-
         resetIndividuals();
 
-        individualNumber += individualNumOfBatch;
         individualStaticTime = 0;
-        console.log(`Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1} generated`);
-        document.getElementById(
-            "label").innerText = `Generation ${generation}, Individual No. ${individualNumber} - ${individualNumber + individualNumOfBatch - 1}`;
+        console.log(`Generation ${generation}, Individual No.` +
+            `${batchInGeneration * individualNumOfBatch + 1} - ` +
+            `${(batchInGeneration + 1) * individualNumOfBatch}`);
+        document.getElementById("label").innerText = 
+            `Generation ${generation}, Individual No.` +
+            `${batchInGeneration * individualNumOfBatch + 1} - ` +
+            `${(batchInGeneration + 1) * individualNumOfBatch}`;    
     }
     displaySurvivalIndividuals(survivalCom.bodies);
 
 });
-
 
 </script>
 </body>
