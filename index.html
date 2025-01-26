@@ -238,18 +238,19 @@ function resetIndividuals() {
     Bounds.shift(render.bounds, {x:0, y:0});
 }
 
-/*
-function removeDeadIndividuals() {
+
+function removeDeadIndividuals(individuals) {
     // remove individual that drops out of the rocks, 
+    const bottom_rock = mountain[mountain.length - 1];
+
     for (let i = 0; i < individuals.length; i++) {
-        if (individuals[i].position.y > canvas_height * 10) {
+        if (individuals[i].position.y > bottom_rock.position.y + 100) {
             Composite.remove(mountainCom, individuals[i]);
             individuals.splice(i, 1);
             i--;
         }
     }
 }
-*/
 
 function findMaxXIndividual(individuals, removeMax = false) {
     if (individuals.length === 0) {
@@ -377,7 +378,7 @@ function spawnNewGenerationBatch(survival_com, start_idx_mother = 0, start_idx_f
 
 Events.on(render, 'beforeRender', function() {
     
-    //removeDeadIndividuals();
+    removeDeadIndividuals(individualsInCurrentBatch);
 
     const headmost = findMaxXIndividual(individualsInCurrentBatch);
 
