@@ -98,14 +98,17 @@ function polarToCartesian(angle, distance) {
 function generateRamdonIndividual(num_in_batch) {
     const vertices_num = getRandomInt(4, 20, individualRand);
     let path = "";
+    let vertices_info = [];
 
     do {
         path = "";
+        vertices_info = [];
         for (let i = 0; i < vertices_num; i++) {
             let angle = 360/vertices_num*i; // getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
             let distance = getRandomFloat(30, 40, individualRand);
             let { x, y } = polarToCartesian(angle, distance);
             path += `${x} ${y} `;
+            vertices_info.push({ angle: angle, distance: distance });
         }
         let individual_vt = Vertices.fromPath(path);
         //let chamfer_radius = getRandomFloat(5, 20, environmentRand);
@@ -125,6 +128,9 @@ function generateRamdonIndividual(num_in_batch) {
         });
     } while (individual === undefined) // if the vertices can NOT be converted to a valid polygon, Bodies.fromVertices will return undefined
 
+    individual.vertices_num = vertices_num;
+    individual.vertices_info = vertices_info;
+    
     return individual;
 }
 
