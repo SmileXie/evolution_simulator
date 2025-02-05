@@ -105,7 +105,7 @@ function generateRamdonIndividual(num_in_batch) {
         vertices_info = [];
         for (let i = 0; i < vertices_num; i++) {
             let angle = 360/vertices_num*i; // getRandomFloat(360/vertices_num*i, 360/vertices_num*(i+1), individualRand);
-            let distance = getRandomFloat(30, 40, individualRand);
+            let distance = getRandomFloat(30, 42, individualRand);
             let { x, y } = polarToCartesian(angle, distance);
             path += `${x} ${y} `;
             vertices_info.push({ angle: angle, distance: distance });
@@ -119,7 +119,7 @@ function generateRamdonIndividual(num_in_batch) {
                 category: 1 << num_in_batch
             },
             restitution: 0.3, //getRandomFloat(0, 0.9, individualRand),
-            friction: getRandomFloat(0.1, 1.0, individualRand),
+            friction: 0.5,//getRandomFloat(0.1, 1.0, individualRand),
             render: { 
                 fillStyle: 'rgba(159, 23, 5, 0.7)',
                 //strokeStyle: '#000000',
@@ -145,7 +145,7 @@ function generateGeneration() {
 
 function generateRandomRocks(count) {
     const rocks = [];
-    const x_interval = 83;
+    const x_interval = 80;
     const y_interval = 60;
     const allOnes32 = 0xffffffff;
 
