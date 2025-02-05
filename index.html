@@ -303,17 +303,15 @@ function getSurvivalIndividuals(individual_com) {
     
     const bottom_rock = mountain[mountain.length - 1];
     let survivals = [];
-    let current_survive;
-    do {
-        let headmost = findMaxXIndividual(individual_com, true);
-        current_survive = false;
-        if (Collision.collides(headmost, bottom_rock) != null) {
-            Body.setStatic(headmost, true);
-            survivals.push(headmost);
-            current_survive = true;
-        }
-    } while (current_survive);
     
+    // traversal individual_com.bodies to find the individuals that are still alive
+    for (let i = 0; i < individual_com.bodies.length; i++) {
+        if (Collision.collides(individual_com.bodies[i], bottom_rock) != null) {
+            Body.setStatic(individual_com.bodies[i], true);
+            survivals.push(individual_com.bodies[i]);
+        }
+    }
+
     return survivals;
 }
 
