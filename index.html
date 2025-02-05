@@ -200,13 +200,12 @@ function generateRandomRocks(count) {
 }
 
 var individualsCurrentGeneration = generateGeneration();
-var individualsInCurrentBatch = individualsCurrentGeneration.slice(
-    batchInGeneration * individualNumOfBatch, (batchInGeneration + 1) * individualNumOfBatch)
 
 const mountain = generateRandomRocks(50);
 const mountainCom = Composite.create({bodies: mountain});
 var individualCom = Composite.create(
-    {bodies: individualsInCurrentBatch});
+    {bodies: individualsCurrentGeneration.slice(
+        batchInGeneration * individualNumOfBatch, (batchInGeneration + 1) * individualNumOfBatch)});
 
 var survivalCom = Composite.create();
 var survivalComLast;
@@ -238,43 +237,36 @@ function resetIndividuals() {
         Composite.add(individualCom, individualsCurrentGeneration[i]);
     }
 
-    individualsInCurrentBatch = individualsCurrentGeneration.slice(
-                batchInGeneration * individualNumOfBatch, (batchInGeneration + 1) * individualNumOfBatch)
-
     Bounds.shift(render.bounds, {x:0, y:0});
 }
 
 
-function removeDeadIndividuals(individuals) {
+function removeDeadIndividuals() {
     // remove individual that drops out of the rocks, 
     const bottom_rock = mountain[mountain.length - 1];
 
-    for (let i = 0; i < individuals.length; i++) {
-        if (individuals[i].position.y > bottom_rock.position.y + 100) {
-            Composite.remove(mountainCom, individuals[i]);
-            individuals.splice(i, 1);
+    for (let i = 0; i < individualCom.bodies.length; i++) {
+        if (individualCom.bodies[i].position.y > bottom_rock.position.y + 100) {
+            Composite.remove(individualCom, individualCom.bodies[i]);
             i--;
         }
     }
 }
 
-function findMaxXIndividual(individuals, removeMax = false) {
-    if (individuals.length === 0) {
+function findMaxXIndividual(individual_com, removeMax = false) {
+    if (individual_com.bodies.length === 0) {
         return null;
     }
 
-    let maxIndividual = individuals[0];
-    for (let i = 1; i < individuals.length; i++) {
-        if (individuals[i].position.x > maxIndividual.position.x) {
-            maxIndividual = individuals[i]; 
+    let maxIndividual = individual_com.bodies[0];
+    for (let i = 1; i < individual_com.bodies.length; i++) {
+        if (individual_com.bodies[i].position.x > maxIndividual.position.x) {
+            maxIndividual = individual_com.bodies[i]; 
         }
     }
 
     if (removeMax) {
-        const index = individuals.indexOf(maxIndividual);
-        if (index > -1) {
-            individuals.splice(index, 1);
-        }
+        Composite.remove(individual_com, maxIndividual);
     }
 
     return maxIndividual;
@@ -307,13 +299,13 @@ function findFastIndividual(individuals) {
     return fastIndividual;
 }
 
-function getSurvivalIndividuals(individuals) {
+function getSurvivalIndividuals(individual_com) {
     
     const bottom_rock = mountain[mountain.length - 1];
     let survivals = [];
     let current_survive;
     do {
-        let headmost = findMaxXIndividual(individuals, true);
+        let headmost = findMaxXIndividual(individual_com, true);
         current_survive = false;
         if (Collision.collides(headmost, bottom_rock) != null) {
             Body.setStatic(headmost, true);
@@ -384,9 +376,9 @@ function spawnNewGenerationBatch(survival_com, start_idx_mother = 0, start_idx_f
 
 Events.on(render, 'beforeRender', function() {
     
-    removeDeadIndividuals(individualsInCurrentBatch);
+    removeDeadIndividuals();
 
-    const headmost = findMaxXIndividual(individualsInCurrentBatch);
+    const headmost = findMaxXIndividual(individualCom);
 
     // move the camera to follow the individual
     if (headmost.position.x > canvas_width/2 && headmost.position.y <= canvas_height/2) {
@@ -402,7 +394,7 @@ Events.on(render, 'beforeRender', function() {
                         {x: headmost.position.x - canvas_width/2, y:headmost.position.y - canvas_height/2});
     }
 
-    const fastIndividual = findFastIndividual(individualsInCurrentBatch);
+    const fastIndividual = findFastIndividual(individualCom.bodies);
 
     if (Body.getSpeed(fastIndividual) < 0.5 && Body.getAngularSpeed(fastIndividual) < 0.01) {
         individualStaticTime += 1;
@@ -413,7 +405,7 @@ Events.on(render, 'beforeRender', function() {
     // if all the individuals are static
     // reset the view to play next batch. 
     if (individualStaticTime > 300) {
-        let batch_survivals = getSurvivalIndividuals(individualsInCurrentBatch);
+        let batch_survivals = getSurvivalIndividuals(individualCom);
         for (let i = 0; i < batch_survivals.length; i++) {
             Composite.remove(individualCom, batch_survivals[i]);
             Composite.add(survivalCom, batch_survivals[i]);
